@@ -59,15 +59,121 @@ const TIMELINE = [
 
 // ── Two-phase fetch ───────────────────────────────────────────────────────────
 // Phase 1: Fast — no web search, just breaking snapshot from model knowledge
-const PHASE1_SYSTEM = `You are a conflict intelligence analyst. Give a fast snapshot of the current Iran/Middle East conflict situation.
+const PHASE1_SYSTEM = `You are a conflict intelligence analyst. Focus ONLY on what happened in the LAST HOUR. Not background. Not history. Only breaking developments from the past 60 minutes.
 Return ONLY raw JSON, start with { end with }, no other text:
-{"threat_level":"CRITICAL or HIGH or ELEVATED or MODERATE or LOW","headline":"single most critical thing happening now","breaking":["urgent fact 1","urgent fact 2","urgent fact 3"],"immediate_danger":"biggest physical threat right now","safe_direction":"what people should do or avoid right now"}`;
+{"threat_level":"CRITICAL or HIGH or ELEVATED or MODERATE or LOW","headline":"The single most critical thing that happened in the LAST HOUR","breaking":["What happened in last 60 min #1 — include approximate time e.g. 20 min ago","What happened in last 60 min #2","What happened in last 60 min #3"],"immediate_danger":"The most immediate physical threat RIGHT NOW to people in the region or US","safe_direction":"What should people do or avoid RIGHT NOW based on last hour"}`;
 
 // Phase 2: Full — web search, complete briefing
-const PHASE2_SYSTEM = `You are a real-time conflict intelligence analyst. Search the web for the LATEST news on Iran, Israel, Middle East conflict TODAY.
-Return ONLY a raw JSON object. No text before or after. Start with { end with }.
-{"threat_level":"CRITICAL or HIGH or ELEVATED or MODERATE or LOW","headline":"most critical thing happening now","breaking":["urgent fact 1","urgent fact 2","urgent fact 3"],"immediate_danger":"biggest physical threat","safe_direction":"what people should do","narrative":"4 paragraphs: 1)historical cause 2)last 48hrs 3)happening right now 4)civilian safety advice","events":[{"timestamp":"","title":"","description":"","severity":"CRITICAL or HIGH or MEDIUM or LOW","category":"STRIKE or DIPLOMATIC or MOVEMENT or STATEMENT or ECONOMIC or OTHER"}],"zones":[{"name":"","country":"","status":"DANGER or CAUTION or WATCH or SAFE","reason":""}],"threats":[{"target":"","type":"","likelihood":"HIGH or MEDIUM or LOW","description":""}],"predictions":[{"scenario":"","probability":70,"timeframe":"24h or 48h or 1week","reasoning":"","trend":"INCREASING or STABLE or DECREASING"}],"background":"2-3 sentences historical context","iranian_sentiment":"ordinary Iranians vs regime","key_players":[{"name":"","role":""}],"alliances":[{"country":"","side":"US_COALITION or IRAN_AXIS or NEUTRAL or UNKNOWN","role":"","status":"ACTIVE or SUPPORTING or WATCHING or SHIFTING","note":"what they are doing right now"}]}
-Include 5-6 events, 6-7 zones, 4-5 threats, 3-4 predictions, 5-6 key players. Alliances: include 15-18 countries/groups: USA, Israel, UK, France, Jordan, Saudi Arabia, UAE, Qatar, Iran, Russia, China, Iraq, Yemen Houthis, Hezbollah, Hamas, Turkey, Pakistan, India. Assign sides from CURRENT news.`;
+const PHASE2_SYSTEM = `You are a real-time conflict intelligence analyst. Search the web for LATEST news from the last few hours on Iran, Israel, Middle East.
+
+CRITICAL RULES:
+- Return ONLY raw JSON. Start with { end with }. Zero text before or after.
+- Every array must have real populated items — NO empty arrays
+- events: minimum 5 real news events from TODAY with actual timestamps
+- threats: minimum 4 CONFIRMED active threats (not predictions) — things actually happening
+- predictions: minimum 4 scenarios ranked by probability of causing maximum damage to US/Western interests
+- alliances: all 16 countries listed below — every single one
+
+JSON schema (fill every field with real data):
+{
+  "threat_level": "CRITICAL|HIGH|ELEVATED|MODERATE|LOW",
+  "headline": "Most critical thing from last 2 hours — specific: who, what, where, when",
+  "last_hour": [
+    "~Xm ago: [specific event with location and actors]",
+    "~Xm ago: [specific event]",
+    "~Xm ago: [specific event]",
+    "~Xm ago: [specific event]"
+  ],
+  "immediate_danger": "Most immediate physical threat RIGHT NOW — specific location and type",
+  "safe_direction": "Exactly what people should do or avoid RIGHT NOW",
+  "why_it_matters": "2 sentences: why this matters and what it leads to in 24h",
+  "narrative": "Para1: last 48hrs context. Para2: RIGHT NOW. Para3: next 24hrs. Para4: civilian safety today.",
+  "events": [
+    {"timestamp": "~Xh ago or HH:MM UTC", "title": "Specific event title", "description": "2-3 sentence detail", "severity": "CRITICAL|HIGH|MEDIUM|LOW", "category": "STRIKE|DIPLOMATIC|MOVEMENT|STATEMENT|ECONOMIC|OTHER"},
+    {"timestamp": "", "title": "", "description": "", "severity": "", "category": ""},
+    {"timestamp": "", "title": "", "description": "", "severity": "", "category": ""},
+    {"timestamp": "", "title": "", "description": "", "severity": "", "category": ""},
+    {"timestamp": "", "title": "", "description": "", "severity": "", "category": ""}
+  ],
+  "zones": [
+    {"name": "City/region name", "country": "Country", "status": "DANGER|CAUTION|WATCH|SAFE", "reason": "Specific reason"},
+    {"name": "", "country": "", "status": "", "reason": ""},
+    {"name": "", "country": "", "status": "", "reason": ""},
+    {"name": "", "country": "", "status": "", "reason": ""},
+    {"name": "", "country": "", "status": "", "reason": ""},
+    {"name": "", "country": "", "status": "", "reason": ""}
+  ],
+  "threats": [
+    {"target": "Specific target e.g. US Navy 5th Fleet", "type": "Missile|Drone|Cyber|Proxy|Terror|Naval", "confirmed": true, "status": "ACTIVE|IMMINENT|ONGOING", "likelihood": "HIGH|MEDIUM|LOW", "source": "Iran|Hezbollah|Houthis|Hamas|Russia|China|Domestic", "description": "What is confirmed happening RIGHT NOW — not a prediction"},
+    {"target": "", "type": "", "confirmed": true, "status": "ACTIVE", "likelihood": "HIGH", "source": "", "description": ""},
+    {"target": "", "type": "", "confirmed": true, "status": "ACTIVE", "likelihood": "HIGH", "source": "", "description": ""},
+    {"target": "", "type": "", "confirmed": false, "status": "IMMINENT", "likelihood": "MEDIUM", "source": "", "description": ""}
+  ],
+  "predictions": [
+    {"scenario": "Most damaging possible next move against US/Western interests", "probability": 75, "damage_level": "CATASTROPHIC|SEVERE|HIGH|MODERATE", "timeframe": "24h|48h|1week", "reasoning": "Why this is likely based on current events", "trend": "INCREASING|STABLE|DECREASING", "targets_us": true},
+    {"scenario": "Second most damaging scenario", "probability": 55, "damage_level": "SEVERE", "timeframe": "48h", "reasoning": "", "trend": "INCREASING", "targets_us": false},
+    {"scenario": "", "probability": 35, "damage_level": "HIGH", "timeframe": "1week", "reasoning": "", "trend": "STABLE", "targets_us": false},
+    {"scenario": "", "probability": 20, "damage_level": "CATASTROPHIC", "timeframe": "1week", "reasoning": "", "trend": "INCREASING", "targets_us": true}
+  ],
+  "background": "2-3 sentences of essential historical context only",
+  "iranian_sentiment": "What ordinary Iranians think vs the regime right now",
+  "key_players": [
+    {"name": "Name", "role": "Title and current action"},
+    {"name": "", "role": ""},
+    {"name": "", "role": ""},
+    {"name": "", "role": ""},
+    {"name": "", "role": ""}
+  ],
+  "alliances": [
+    {"country": "USA", "side": "US_COALITION", "role": "Leading coalition", "status": "ACTIVE", "note": "What USA is doing right now"},
+    {"country": "Israel", "side": "US_COALITION", "role": "", "status": "ACTIVE", "note": ""},
+    {"country": "UK", "side": "US_COALITION", "role": "", "status": "SUPPORTING", "note": ""},
+    {"country": "France", "side": "US_COALITION", "role": "", "status": "SUPPORTING", "note": ""},
+    {"country": "Jordan", "side": "US_COALITION", "role": "", "status": "WATCHING", "note": ""},
+    {"country": "Saudi Arabia", "side": "NEUTRAL", "role": "", "status": "WATCHING", "note": ""},
+    {"country": "UAE", "side": "NEUTRAL", "role": "", "status": "WATCHING", "note": ""},
+    {"country": "Qatar", "side": "NEUTRAL", "role": "", "status": "WATCHING", "note": ""},
+    {"country": "Iran", "side": "IRAN_AXIS", "role": "Leading axis", "status": "ACTIVE", "note": ""},
+    {"country": "Russia", "side": "IRAN_AXIS", "role": "", "status": "SUPPORTING", "note": ""},
+    {"country": "China", "side": "NEUTRAL", "role": "", "status": "WATCHING", "note": ""},
+    {"country": "Iraq", "side": "NEUTRAL", "role": "", "status": "WATCHING", "note": ""},
+    {"country": "Hezbollah", "side": "IRAN_AXIS", "role": "Proxy force", "status": "ACTIVE", "note": ""},
+    {"country": "Houthis Yemen", "side": "IRAN_AXIS", "role": "Proxy force", "status": "ACTIVE", "note": ""},
+    {"country": "Hamas", "side": "IRAN_AXIS", "role": "Proxy force", "status": "ACTIVE", "note": ""},
+    {"country": "Turkey", "side": "NEUTRAL", "role": "", "status": "WATCHING", "note": ""}
+  ],
+  "homeland": {
+    "threat_level": "CRITICAL|HIGH|ELEVATED|MODERATE|LOW",
+    "california_score": 7,
+    "summary": "2-3 sentence overview of current US homeland threat especially California",
+    "fbi_alerts": ["Copy any active FBI/DHS alert text verbatim if found in search results"],
+    "targets": [
+      {"location": "Port of Long Beach", "type": "infrastructure", "threat": "Drone/cyber attack", "source": "Iran", "likelihood": "HIGH", "detail": "Specific reason this facility is at risk right now"},
+      {"location": "Vandenberg SFB", "type": "military", "threat": "", "source": "Iran", "likelihood": "HIGH", "detail": ""},
+      {"location": "Naval Base San Diego", "type": "military", "threat": "", "source": "Iran", "likelihood": "MEDIUM", "detail": ""},
+      {"location": "Silicon Valley tech infrastructure", "type": "infrastructure", "threat": "Cyber", "source": "Iran|China", "likelihood": "MEDIUM", "detail": ""},
+      {"location": "Golden Gate Bridge / Bay Area", "type": "symbolic", "threat": "", "source": "Unknown", "likelihood": "LOW", "detail": ""}
+    ],
+    "california_specific": "Specific paragraph on California threat — name cities and facilities",
+    "northern_california": {
+      "threat_level": "ELEVATED",
+      "cities": ["San Francisco", "Oakland", "San Jose", "Sacramento"],
+      "detail": "Specific NorCal threat picture with named facilities and reasons"
+    },
+    "southern_california": {
+      "threat_level": "HIGH",
+      "cities": ["Los Angeles", "Long Beach", "San Diego", "Riverside"],
+      "detail": "Specific SoCal threat picture with named facilities and reasons"
+    },
+    "watchlist": ["Port of Long Beach", "Vandenberg SFB", "Naval Base San Diego", "Golden Gate Bridge", "LAX Airport", "Diablo Canyon Nuclear Plant"],
+    "recommended_actions": [
+      "Be aware of suspicious activity near military installations and ports",
+      "Report unidentified drones near sensitive facilities to local law enforcement",
+      "Stay informed via FEMA alerts and local emergency broadcasts"
+    ]
+  }
+}
+Search specifically for: Iran drone California FBI alert, US military Middle East today, Israel Iran strikes latest, Hezbollah attacks today, Houthi attacks today, DHS homeland security alerts. california_score: 1=no threat, 10=imminent confirmed attack. Set based on actual current intelligence found.`;
 
 function extractJSON(text) {
   const a = text.indexOf("{"), b = text.lastIndexOf("}");
@@ -78,22 +184,15 @@ function extractJSON(text) {
 async function callAPI(system, useSearch) {
   const body = {
     model: "claude-sonnet-4-20250514",
-    max_tokens: useSearch ? 8000 : 800,
+    max_tokens: useSearch ? 12000 : 800,
     system,
-    messages: [{ role:"user", content:"Return ONLY the JSON object starting with {. No other text." }],
+    messages: [{ role:"user", content:"Search for: Iran attack news today, Middle East war latest, FBI California threat, US military Middle East, Israel strikes today. Then return ONLY the JSON object starting with {. No other text. No markdown." }],
   };
   if (useSearch) body.tools = [{ type:"web_search_20250305", name:"web_search" }];
 
-  // Use proxy in production, direct API in Claude.ai artifact environment
-  const endpoint = typeof window !== "undefined" && window.location.hostname.includes("claude.ai")
-    ? "https://api.anthropic.com/v1/messages"
-    : "/api/intel";
-
-  const headers = { "Content-Type":"application/json" };
-
-  const res = await fetch(endpoint, {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
     method:"POST",
-    headers,
+    headers:{ "Content-Type":"application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -317,6 +416,398 @@ function AlliancesTab({ alliances }) {
 }
 
 // ── Main App ──────────────────────────────────────────────────────────────────
+
+
+// ── CALIFORNIA THREAT METER ───────────────────────────────────────────────────
+function CAThreatMeter({ score, onClick }) {
+  // score: 1-10
+  const s = score || 0;
+  const getColor = (n) => {
+    if (n <= 3) return "#00dd66";
+    if (n <= 5) return "#ffcc00";
+    if (n <= 7) return "#ff8800";
+    if (n <= 9) return "#ff4400";
+    return "#ff0000";
+  };
+  const getLabel = (n) => {
+    if (!n) return "NO DATA";
+    if (n <= 2) return "MINIMAL";
+    if (n <= 4) return "ELEVATED";
+    if (n <= 6) return "HIGH";
+    if (n <= 8) return "SEVERE";
+    return "CRITICAL";
+  };
+  const color = getColor(s);
+  const pulseStyle = s >= 8 ? { animation:"pulse 0.6s infinite" } : {};
+
+  return (
+    <button onClick={onClick} style={{
+      cursor:"pointer", border:"none", padding:"6px 14px",
+      display:"flex", alignItems:"center", gap:10,
+      outline:`1px solid ${s ? color+"55" : "#1a1a1a"}`,
+      background: s ? color+"11" : "#080808",
+      transition:"all 0.3s",
+    }} title="Click for California threat details">
+      {/* Pip row */}
+      <div style={{ display:"flex", gap:3, alignItems:"center" }}>
+        {[1,2,3,4,5,6,7,8,9,10].map(n => (
+          <div key={n} style={{
+            width: n === s ? 10 : 7,
+            height: n === s ? 18 : 14,
+            borderRadius:2,
+            background: n <= s ? getColor(n) : "#1c1c1c",
+            boxShadow: n === s && s > 0 ? `0 0 8px ${getColor(n)}` : "none",
+            transition:"all 0.3s",
+            ...( n === s && s >= 8 ? pulseStyle : {}),
+          }} />
+        ))}
+      </div>
+      {/* Label */}
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", minWidth:80 }}>
+        <div style={{ fontSize:9, color:"#666", letterSpacing:2, lineHeight:1 }}>🇺🇸 CA THREAT</div>
+        <div style={{ fontSize:11, color: s ? color : "#444", fontWeight:"bold", letterSpacing:1, marginTop:2 }}>
+          {s ? `${s}/10 ${getLabel(s)}` : "SCAN TO ACTIVATE"}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+
+// ── MIDDLE EAST SVG MAP ───────────────────────────────────────────────────────
+// Simplified country paths in a custom coordinate space (viewBox 0 0 800 600)
+const ME_COUNTRIES = [
+  { id:"Turkey",       path:"M 120,60 L 280,55 L 310,75 L 290,95 L 260,100 L 230,90 L 200,100 L 170,95 L 140,100 L 110,85 Z",           cx:210, cy:78  },
+  { id:"Syria",        path:"M 260,100 L 310,95 L 320,120 L 300,140 L 270,145 L 250,130 L 245,110 Z",                                    cx:283, cy:123 },
+  { id:"Lebanon",      path:"M 250,130 L 265,128 L 268,148 L 252,150 Z",                                                                  cx:259, cy:139 },
+  { id:"Israel",       path:"M 248,150 L 262,148 L 265,168 L 255,185 L 245,170 L 242,158 Z",                                              cx:254, cy:165 },
+  { id:"Gaza",         path:"M 242,170 L 250,168 L 249,180 L 241,180 Z",                                                                  cx:246, cy:174 },
+  { id:"Jordan",       path:"M 262,148 L 290,145 L 295,175 L 285,200 L 260,200 L 250,185 L 255,168 Z",                                    cx:273, cy:174 },
+  { id:"Iraq",         path:"M 310,95 L 370,90 L 390,110 L 395,160 L 375,190 L 340,195 L 300,175 L 295,150 L 320,140 L 310,120 Z",        cx:348, cy:143 },
+  { id:"Iran",         path:"M 370,60 L 470,55 L 510,80 L 520,120 L 510,160 L 480,185 L 440,190 L 400,180 L 390,155 L 395,120 L 390,100 L 370,90 Z", cx:445, cy:123 },
+  { id:"Kuwait",       path:"M 370,185 L 390,180 L 395,200 L 375,205 Z",                                                                  cx:382, cy:193 },
+  { id:"Saudi Arabia", path:"M 260,200 L 290,195 L 340,195 L 375,205 L 390,200 L 420,240 L 430,310 L 380,360 L 320,370 L 270,340 L 245,290 L 250,240 Z", cx:340, cy:280 },
+  { id:"Yemen",        path:"M 320,370 L 380,360 L 430,310 L 450,330 L 440,380 L 390,420 L 320,410 L 295,390 Z",                          cx:375, cy:385 },
+  { id:"Oman",         path:"M 430,240 L 480,220 L 530,240 L 545,290 L 510,340 L 460,360 L 440,330 L 430,310 Z",                          cx:487, cy:290 },
+  { id:"UAE",          path:"M 430,220 L 470,210 L 480,230 L 450,240 L 430,240 Z",                                                        cx:455, cy:228 },
+  { id:"Qatar",        path:"M 400,215 L 415,210 L 418,230 L 403,232 Z",                                                                  cx:409, cy:221 },
+  { id:"Bahrain",      path:"M 392,208 L 400,206 L 401,215 L 393,216 Z",                                                                  cx:396, cy:211 },
+  { id:"Egypt",        path:"M 150,150 L 245,145 L 248,200 L 245,255 L 200,265 L 150,260 L 130,220 L 135,180 Z",                          cx:193, cy:207 },
+  { id:"Libya",        path:"M 50,100 L 150,95 L 150,150 L 135,180 L 130,220 L 80,230 L 40,200 L 30,150 Z",                               cx:95,  cy:162 },
+  { id:"Sudan",        path:"M 150,260 L 200,265 L 245,255 L 260,300 L 250,360 L 200,380 L 155,370 L 140,320 L 145,280 Z",                cx:196, cy:318 },
+  { id:"Houthis/Yemen",path:"M 295,390 L 320,410 L 310,430 L 288,420 Z",                                                                  cx:303, cy:412 },
+];
+
+function MiddleEastMap({ zones }) {
+  const [hovered, setHovered]   = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [tooltip, setTooltip]   = useState({ x:0, y:0 });
+
+  // Build a lookup from country name → zone data
+  const zoneMap = {};
+  if (zones) {
+    zones.forEach(z => {
+      // Try to match zone name/country to map country id
+      ME_COUNTRIES.forEach(c => {
+        if (z.name?.toLowerCase().includes(c.id.toLowerCase()) ||
+            c.id.toLowerCase().includes(z.name?.toLowerCase()) ||
+            z.country?.toLowerCase().includes(c.id.toLowerCase()) ||
+            c.id.toLowerCase().includes(z.country?.toLowerCase())) {
+          zoneMap[c.id] = z;
+        }
+      });
+    });
+  }
+
+  const getCountryColor = (id) => {
+    const z = zoneMap[id];
+    if (!z) return "#1a1a1a";
+    return { DANGER:"#ff3300", CAUTION:"#ff8800", WATCH:"#ffcc00", SAFE:"#00dd66" }[z.status] || "#1a1a1a";
+  };
+
+  const getCountryOpacity = (id) => {
+    if (hovered === id || selected === id) return 0.85;
+    return zoneMap[id] ? 0.45 : 0.2;
+  };
+
+  const handleClick = (country, e) => {
+    const svg = e.currentTarget.closest("svg");
+    const rect = svg.getBoundingClientRect();
+    setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setSelected(selected === country.id ? null : country.id);
+  };
+
+  const selectedZone = selected ? zoneMap[selected] : null;
+  const selectedCountry = selected ? ME_COUNTRIES.find(c => c.id === selected) : null;
+
+  return (
+    <div style={{ position:"relative" }}>
+      <SectionHead>🗺 MIDDLE EAST THREAT MAP — CLICK ANY COUNTRY</SectionHead>
+      <div style={{ fontSize:11, color:"#555", marginBottom:16, letterSpacing:2 }}>
+        Colored by threat level from live scan. Click a country for details.
+      </div>
+
+      {/* Legend */}
+      <div style={{ display:"flex", gap:20, marginBottom:16, flexWrap:"wrap" }}>
+        {Object.entries({ DANGER:"#ff3300", CAUTION:"#ff8800", WATCH:"#ffcc00", SAFE:"#00dd66" }).map(([s,c]) => (
+          <div key={s} style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <div style={{ width:12, height:12, background:c, opacity:0.7 }} />
+            <span style={{ fontSize:10, color:"#888", letterSpacing:2 }}>{s}</span>
+          </div>
+        ))}
+        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <div style={{ width:12, height:12, background:"#1a1a1a", border:"1px solid #333" }} />
+          <span style={{ fontSize:10, color:"#555", letterSpacing:2 }}>NO DATA</span>
+        </div>
+      </div>
+
+      <div style={{ position:"relative", background:"#080808", border:"1px solid #1a1a1a", overflow:"hidden" }}>
+        <svg viewBox="0 0 800 500" width="100%" style={{ display:"block" }}>
+          {/* Background ocean */}
+          <rect x="0" y="0" width="800" height="500" fill="#050d14" />
+          {/* Grid lines */}
+          {[100,200,300,400,500,600,700].map(x => <line key={x} x1={x} y1="0" x2={x} y2="500" stroke="#0a1a22" strokeWidth="0.5"/>)}
+          {[100,200,300,400].map(y => <line key={y} x1="0" y1={y} x2="800" y2={y} stroke="#0a1a22" strokeWidth="0.5"/>)}
+
+          {/* Countries */}
+          {ME_COUNTRIES.map(country => {
+            const color   = getCountryColor(country.id);
+            const opacity = getCountryOpacity(country.id);
+            const isActive = zoneMap[country.id];
+            const isSelected = selected === country.id;
+            return (
+              <g key={country.id}
+                onClick={e => handleClick(country, e)}
+                onMouseEnter={() => setHovered(country.id)}
+                onMouseLeave={() => setHovered(null)}
+                style={{ cursor:"pointer" }}
+              >
+                <path
+                  d={country.path}
+                  fill={color}
+                  fillOpacity={opacity}
+                  stroke={isSelected ? "#fff" : isActive ? color : "#333"}
+                  strokeWidth={isSelected ? 2 : isActive ? 1 : 0.5}
+                  strokeOpacity={isSelected ? 1 : 0.6}
+                />
+                {/* Glow for active */}
+                {isActive && (
+                  <path d={country.path} fill="none" stroke={color} strokeWidth="3" strokeOpacity="0.15" />
+                )}
+                {/* Country label */}
+                <text
+                  x={country.cx} y={country.cy}
+                  textAnchor="middle" dominantBaseline="middle"
+                  fontSize={country.id.length > 8 ? "7" : "8"}
+                  fill={isActive ? "#fff" : "#555"}
+                  fillOpacity={hovered === country.id ? 1 : 0.8}
+                  fontFamily="Share Tech Mono, monospace"
+                  style={{ pointerEvents:"none", userSelect:"none" }}
+                >
+                  {country.id === "Saudi Arabia" ? "SAUDI" : country.id === "Houthis/Yemen" ? "HOUTHIS" : country.id.toUpperCase()}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Active event pulse dots */}
+          {ME_COUNTRIES.filter(c => zoneMap[c.id]?.status === "DANGER").map(c => (
+            <circle key={c.id+"pulse"} cx={c.cx} cy={c.cy-14} r="3" fill="#ff3300">
+              <animate attributeName="r" values="3;7;3" dur="1.5s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="1;0;1" dur="1.5s" repeatCount="indefinite"/>
+            </circle>
+          ))}
+        </svg>
+
+        {/* Selected country popup */}
+        {selected && (
+          <div style={{
+            position:"absolute",
+            left: tooltip.x > 500 ? "auto" : tooltip.x + 10,
+            right: tooltip.x > 500 ? 10 : "auto",
+            top: Math.min(tooltip.y + 10, 320),
+            width:260, background:"#0d0d0d",
+            border:`1px solid ${getCountryColor(selected)}66`,
+            borderLeft:`4px solid ${getCountryColor(selected)}`,
+            padding:"14px 16px", zIndex:10,
+            boxShadow:`0 0 24px ${getCountryColor(selected)}22`,
+          }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+              <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:16, color:"#fff" }}>{selected}</div>
+              <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:"#555", cursor:"pointer", fontSize:14 }}>✕</button>
+            </div>
+            {selectedZone ? (
+              <>
+                <div style={{ fontSize:10, color:getCountryColor(selected), letterSpacing:2, marginBottom:8, fontWeight:"bold" }}>
+                  ● {selectedZone.status}
+                </div>
+                <div style={{ fontSize:12, color:"#b0b8b0", lineHeight:1.8 }}>{selectedZone.reason}</div>
+              </>
+            ) : (
+              <div style={{ fontSize:12, color:"#555", lineHeight:1.8 }}>No active threat data for this country in current scan.</div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── HOMELAND TAB ──────────────────────────────────────────────────────────────
+const THREAT_BG = { CRITICAL:"#1a0400", HIGH:"#1a0a00", ELEVATED:"#1a1400", MODERATE:"#0f0f0f", LOW:"#030f05" };
+const SOURCE_COLORS = { Iran:"#ff3300", China:"#ff6600", Russia:"#cc44ff", Domestic:"#ffcc00", Unknown:"#888" };
+
+function HomelandTab({ homeland, threatLevel }) {
+  if (!homeland) return (
+    <div style={{ paddingTop:60, textAlign:"center", color:"#444", fontSize:12, letterSpacing:3 }}>
+      RUN A SCAN TO LOAD HOMELAND THREAT DATA
+    </div>
+  );
+
+  const tlColor = (THREAT_CONFIG[homeland.threat_level]||THREAT_CONFIG.MODERATE).color;
+  const tlBg    = (THREAT_CONFIG[homeland.threat_level]||THREAT_CONFIG.MODERATE).dim;
+
+  return (
+    <div style={{ paddingTop:28 }}>
+      <SectionHead>🇺🇸 US HOMELAND THREAT ASSESSMENT — LIVE INTELLIGENCE</SectionHead>
+
+      {/* Big threat level banner */}
+      <div style={{ padding:"20px 28px", background:tlBg, border:`1px solid ${tlColor}66`, borderLeft:`6px solid ${tlColor}`, marginBottom:24, display:"flex", alignItems:"center", gap:24 }}>
+        <div style={{ textAlign:"center", flexShrink:0 }}>
+          <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:32, color:tlColor, fontWeight:700, letterSpacing:4 }}>{homeland.threat_level}</div>
+          <div style={{ fontSize:9, color:tlColor, letterSpacing:3, marginTop:4 }}>HOMELAND THREAT</div>
+        </div>
+        <div style={{ flex:1, fontSize:14, color:"#e0e8e0", lineHeight:1.85, borderLeft:`1px solid ${tlColor}33`, paddingLeft:24 }}>
+          {homeland.summary}
+        </div>
+      </div>
+
+      {/* FBI / DHS Alerts */}
+      {homeland.fbi_alerts?.length > 0 && (
+        <div style={{ marginBottom:24, padding:"16px 20px", background:"#0f0808", border:"1px solid #ff330044" }}>
+          <div style={{ fontSize:10, color:"#ff4400", letterSpacing:4, fontWeight:"bold", marginBottom:14, display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ animation:"pulse 1s infinite", display:"inline-block" }}>🔴</span> ACTIVE FBI / DHS ALERTS
+          </div>
+          {homeland.fbi_alerts.map((alert, i) => (
+            <div key={i} style={{ display:"flex", gap:14, padding:"10px 0", borderBottom:"1px solid #1a0a0a" }}>
+              <span style={{ color:"#ff4400", flexShrink:0, fontSize:12, marginTop:2 }}>▶</span>
+              <span style={{ fontSize:13, color:"#ffcccc", lineHeight:1.75 }}>{alert}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* California Specific */}
+      {homeland.california_specific && (
+        <div style={{ marginBottom:24 }}>
+          <SectionHead>📍 CALIFORNIA — SPECIFIC THREAT PICTURE</SectionHead>
+          <div style={{ padding:"16px 20px", background:"#0a0d0a", border:"1px solid #336633", borderLeft:"4px solid #66aa66", fontSize:14, color:"#c8d8c8", lineHeight:1.9, marginBottom:12 }}>
+            {homeland.california_specific}
+          </div>
+          {/* NorCal / SoCal split */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            {homeland.northern_california && (() => {
+              const c = (THREAT_CONFIG[homeland.northern_california.threat_level]||THREAT_CONFIG.MODERATE).color;
+              return (
+                <div style={{ padding:"16px 20px", background:"#0d0d0d", border:`1px solid ${c}33`, borderTop:`3px solid ${c}` }}>
+                  <div style={{ fontSize:10, color:c, letterSpacing:3, marginBottom:8, fontWeight:"bold" }}>🔺 NORTHERN CALIFORNIA — {homeland.northern_california.threat_level}</div>
+                  {homeland.northern_california.cities?.length > 0 && (
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:10 }}>
+                      {homeland.northern_california.cities.map((city,i) => (
+                        <span key={i} style={{ fontSize:10, color:"#ffcc88", padding:"2px 10px", background:"#1a1200", border:"1px solid #33220033" }}>📍 {city}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ fontSize:12, color:"#b0b8b0", lineHeight:1.8 }}>{homeland.northern_california.detail}</div>
+                </div>
+              );
+            })()}
+            {homeland.southern_california && (() => {
+              const c = (THREAT_CONFIG[homeland.southern_california.threat_level]||THREAT_CONFIG.MODERATE).color;
+              return (
+                <div style={{ padding:"16px 20px", background:"#0d0d0d", border:`1px solid ${c}33`, borderTop:`3px solid ${c}` }}>
+                  <div style={{ fontSize:10, color:c, letterSpacing:3, marginBottom:8, fontWeight:"bold" }}>🔻 SOUTHERN CALIFORNIA — {homeland.southern_california.threat_level}</div>
+                  {homeland.southern_california.cities?.length > 0 && (
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:10 }}>
+                      {homeland.southern_california.cities.map((city,i) => (
+                        <span key={i} style={{ fontSize:10, color:"#ffcc88", padding:"2px 10px", background:"#1a1200", border:"1px solid #33220033" }}>📍 {city}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ fontSize:12, color:"#b0b8b0", lineHeight:1.8 }}>{homeland.southern_california.detail}</div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Target cards */}
+      {homeland.targets?.length > 0 && (
+        <div style={{ marginBottom:24 }}>
+          <SectionHead>🎯 IDENTIFIED US TARGETS — {homeland.targets.length} ACTIVE</SectionHead>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            {[...homeland.targets].sort((a,b) => ({HIGH:0,MEDIUM:1,LOW:2}[a.likelihood]||1) - ({HIGH:0,MEDIUM:1,LOW:2}[b.likelihood]||1))
+              .map((t, i) => {
+                const lColor = {HIGH:"#ff3300",MEDIUM:"#ff8800",LOW:"#888"}[t.likelihood]||"#888";
+                const sColor = SOURCE_COLORS[t.source]||"#888";
+                return (
+                  <div key={i} style={{ padding:"16px 20px", background:"#0d0d0d", border:`1px solid ${lColor}22`, borderLeft:`4px solid ${lColor}` }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                      <div style={{ fontSize:15, color:"#fff", fontWeight:"bold", flex:1, paddingRight:12 }}>{t.location}</div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:4, alignItems:"flex-end" }}>
+                        <span style={{ fontSize:9, color:lColor, fontWeight:"bold", padding:"2px 8px", border:`1px solid ${lColor}44`, background:`${lColor}11` }}>{t.likelihood}</span>
+                        <span style={{ fontSize:9, color:sColor, padding:"2px 8px", border:`1px solid ${sColor}33` }}>{t.source}</span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize:10, color:"#777", letterSpacing:1, marginBottom:8 }}>
+                      TYPE: <span style={{ color:"#999" }}>{t.type?.toUpperCase()}</span>
+                      {t.threat && <span style={{ marginLeft:16 }}>THREAT: <span style={{ color:"#999" }}>{t.threat}</span></span>}
+                    </div>
+                    {t.detail && <div style={{ fontSize:12, color:"#b0b8b0", lineHeight:1.75 }}>{t.detail}</div>}
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* Watchlist */}
+      {homeland.watchlist?.length > 0 && (
+        <div style={{ marginBottom:24 }}>
+          <SectionHead>👁 LOCATIONS UNDER ELEVATED MONITORING</SectionHead>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:10 }}>
+            {homeland.watchlist.map((loc, i) => (
+              <div key={i} style={{ padding:"8px 18px", background:"#0f0a00", border:"1px solid #ffaa0033", fontSize:12, color:"#ffcc88", letterSpacing:1 }}>
+                📍 {loc}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recommended actions */}
+      {homeland.recommended_actions?.length > 0 && (
+        <div style={{ marginBottom:24 }}>
+          <SectionHead>✅ WHAT CIVILIANS SHOULD KNOW</SectionHead>
+          <div style={{ padding:"16px 20px", background:"#030f05", border:"1px solid #00cc4433" }}>
+            {homeland.recommended_actions.map((action, i) => (
+              <div key={i} style={{ display:"flex", gap:14, padding:"8px 0", borderBottom:i < homeland.recommended_actions.length-1 ? "1px solid #0a1a0a" : "none" }}>
+                <span style={{ color:"#00cc55", flexShrink:0, fontSize:12, marginTop:2 }}>✓</span>
+                <span style={{ fontSize:13, color:"#ccffdd", lineHeight:1.75 }}>{action}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ fontSize:10, color:"#444", letterSpacing:2, marginTop:20, paddingTop:16, borderTop:"1px solid #141414" }}>
+        SOURCE: Open-source intelligence aggregated from FBI alerts, DHS advisories, and public news. Not classified. Auto-refreshes every 5 minutes.
+      </div>
+    </div>
+  );
+}
+
 export default function KonfliktApp() {
   const [data, setData]           = useState(null);
   const [phase1, setPhase1]       = useState(null);   // fast snapshot
@@ -385,8 +876,10 @@ export default function KonfliktApp() {
 
   const TABS = [
     { id:"timeline",  label:"◷  TIMELINE",    always:true  },
+    { id:"map",       label:"🗺  MAP",         always:false },
     { id:"live",      label:"⚡  LIVE BRIEF",  always:false },
     { id:"events",    label:"◉  EVENTS",      always:false },
+    { id:"homeland",  label:"🇺🇸  HOMELAND",   always:false },
     { id:"alliances", label:"⚔  ALLIANCES",   always:false },
     { id:"zones",     label:"◎  ZONES",       always:false },
     { id:"threats",   label:"⚠  THREATS",     always:false },
@@ -417,12 +910,16 @@ export default function KonfliktApp() {
 
       {/* ── HEADER ── */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:"#060606", borderBottom:"1px solid #1a1a1a" }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 24px" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 24px", position:"relative" }}>
           <div style={{ display:"flex", alignItems:"center", gap:18 }}>
             <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:22, letterSpacing:7, color:"#fff", fontWeight:700 }}>KONFLIKT</span>
             <span style={{ fontSize:10, color:"#444", letterSpacing:4 }}>LIVE INTEL</span>
             {data && !loading && <span style={{ fontSize:10, color:"#00cc55", letterSpacing:2 }}>● LIVE</span>}
             {loading && <span style={{ fontSize:10, color:"#ffaa00", letterSpacing:2, animation:"pulse 0.8s infinite" }}>◈ {phase==="fast"?"CONNECTING...":"UPDATING..."}</span>}
+          </div>
+          {/* CA Threat Meter — center */}
+          <div style={{ position:"absolute", left:"50%", transform:"translateX(-50%)" }}>
+            <CAThreatMeter score={data?.homeland?.california_score} onClick={() => setTab("homeland")} />
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:16 }}>
             {data && !loading && countdown > 0 && <span style={{ fontSize:10, color:"#555", letterSpacing:2 }}>REFRESH IN {fmtCountdown(countdown)}</span>}
@@ -441,8 +938,8 @@ export default function KonfliktApp() {
 
         {/* Status bar — shows during scan */}
         {statusMsg && (
-          <div style={{ padding:"5px 24px", background:"#060606", borderTop:"1px solid #111", fontSize:9, color:"#ffaa00", letterSpacing:3, position:"relative", overflow:"hidden" }}>
-            {statusMsg}
+          <div onClick={() => data && setTab("threats")} style={{ padding:"5px 24px", background:"#060606", borderTop:"1px solid #111", fontSize:9, color:"#ffaa00", letterSpacing:3, position:"relative", overflow:"hidden", cursor: data ? "pointer" : "default" }}>
+            {statusMsg} {data && <span style={{color:"#ffaa0066"}}>— CLICK TO VIEW THREATS</span>}
             <div style={{ position:"absolute", top:0, left:0, bottom:0, width:"30%", background:"linear-gradient(90deg,transparent,#ffaa0010,transparent)", animation:"sweep 1.5s infinite" }} />
           </div>
         )}
@@ -507,18 +1004,50 @@ export default function KonfliktApp() {
           </div>
         )}
 
+        {/* MAP TAB */}
+        {data && tab==="map" && (
+          <div className="fu" style={{ paddingTop:28 }}>
+            <MiddleEastMap zones={data.zones} />
+          </div>
+        )}
+
         {/* ── LIVE TAB ── */}
         {data && tab==="live" && (
           <div className="fu" style={{ paddingTop:28 }}>
             {loading && <div style={{ padding:"10px 16px", background:"#0a0a06", border:"1px solid #ffaa0022", marginBottom:20, fontSize:10, color:"#ffaa00", letterSpacing:3, animation:"pulse 1s infinite" }}>◈ REFRESHING INTEL IN BACKGROUND — CURRENT DATA SHOWN BELOW</div>}
-            <SectionHead>▶ WHAT YOU NEED TO KNOW RIGHT NOW</SectionHead>
-            {data.breaking?.map((fact,i) => (
-              <div key={i} style={{ display:"flex", gap:14, padding:"13px 0", borderBottom:"1px solid #141414" }}>
-                <span style={{ color:tcfg.color, fontSize:12, flexShrink:0, marginTop:2 }}>▶</span>
-                <span style={{ fontSize:14, color:"#fff", lineHeight:1.7 }}>{fact}</span>
+
+            {/* ── LAST HOUR — top priority block ── */}
+            <div style={{ marginBottom:28 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:16 }}>
+                <div style={{ width:8, height:8, borderRadius:"50%", background:tcfg.color, boxShadow:`0 0 10px ${tcfg.color}`, animation:"pulse 0.8s infinite" }} />
+                <span style={{ fontSize:11, color:tcfg.color, letterSpacing:5, fontWeight:"bold" }}>LAST 60 MINUTES — WHAT YOU NEED TO KNOW</span>
+                <div style={{ flex:1, height:1, background:`linear-gradient(to right, ${tcfg.color}44, transparent)` }} />
               </div>
-            ))}
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop:20, marginBottom:28 }}>
+
+              {/* Urgent facts from last hour */}
+              <div style={{ background:"#0d0d0d", border:`1px solid ${tcfg.color}33`, borderLeft:`4px solid ${tcfg.color}`, marginBottom:12 }}>
+                {(data.last_hour || data.breaking || []).map((fact, i) => (
+                  <div key={i} style={{
+                    display:"flex", gap:14, padding:"14px 18px",
+                    borderBottom: i < (data.last_hour||data.breaking||[]).length-1 ? "1px solid #141414" : "none",
+                    background: i===0 ? `${tcfg.color}08` : "transparent",
+                  }}>
+                    <span style={{ color: i===0 ? tcfg.color : "#555", fontSize:i===0?14:12, flexShrink:0, marginTop:2, fontWeight:"bold" }}>{i===0?"▶":"›"}</span>
+                    <span style={{ fontSize: i===0?15:13, color: i===0?"#ffffff":"#c0c8c0", lineHeight:1.75, fontWeight:i===0?"bold":"normal" }}>{fact}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Why it matters */}
+              {data.why_it_matters && (
+                <div style={{ padding:"12px 16px", background:"#0a0d14", border:"1px solid #3333aa44", borderLeft:"3px solid #6666cc", fontSize:13, color:"#aaaaee", lineHeight:1.8, fontStyle:"italic" }}>
+                  💡 {data.why_it_matters}
+                </div>
+              )}
+            </div>
+
+            {/* ── Danger / Action cards ── */}
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:28 }}>
               {data.immediate_danger && (
                 <div style={{ padding:"16px 20px", background:"#110404", border:`1px solid ${tcfg.color}44`, display:"flex", gap:14 }}>
                   <span style={{ color:"#ff4400", fontSize:20, flexShrink:0 }}>⚠</span>
@@ -538,17 +1067,21 @@ export default function KonfliktApp() {
                 </div>
               )}
             </div>
+
+            {/* ── Full narrative ── */}
             {data.narrative && (
               <>
-                <SectionHead>◉ FULL SITUATION NARRATIVE</SectionHead>
+                <SectionHead>◉ FULL SITUATION — LAST 48 HOURS → NOW → NEXT 24H</SectionHead>
                 {data.narrative.split("\n").filter(p=>p.trim()).map((para,i) => (
-                  <p key={i} style={{ fontSize:14, color:i===0?"#e8e8e8":"#c0c8c0", lineHeight:1.95, marginBottom:18, paddingLeft:i===0?18:0, borderLeft:i===0?`3px solid ${tcfg.color}`:"none" }}>{para}</p>
+                  <p key={i} style={{ fontSize:14, color:i===0?"#e8e8e8":"#c0c8c0", lineHeight:1.95, marginBottom:18, paddingLeft:18, borderLeft:`3px solid ${i===0?tcfg.color:i===1?"#ff8800":i===2?"#aaaaff":"#336633"}` }}>{para}</p>
                 ))}
               </>
             )}
+
+            {/* ── Top prediction ── */}
             {data.predictions?.[0] && (
               <div className="card" style={{ marginTop:10, borderLeft:"3px solid #7777ff" }}>
-                <div style={{ fontSize:10, color:"#8888cc", letterSpacing:3, marginBottom:10, fontWeight:"bold" }}>◈ TOP PREDICTION</div>
+                <div style={{ fontSize:10, color:"#8888cc", letterSpacing:3, marginBottom:10, fontWeight:"bold" }}>◈ MOST LIKELY NEXT EVENT</div>
                 <div style={{ fontSize:15, color:"#fff", marginBottom:4 }}>{data.predictions[0].scenario}</div>
                 <ProbBar value={data.predictions[0].probability} trend={data.predictions[0].trend} />
                 <div style={{ fontSize:12, color:"#9999aa", marginTop:12, lineHeight:1.75 }}>{data.predictions[0].reasoning}</div>
@@ -560,18 +1093,34 @@ export default function KonfliktApp() {
         {/* EVENTS */}
         {data && tab==="events" && (
           <div className="fu" style={{ paddingTop:28 }}>
-            <SectionHead>⚡ EVENT LOG — {data.events?.length||0} EVENTS</SectionHead>
-            {data.events?.map((ev,i) => (
-              <details key={i} style={{ marginBottom:8 }}>
-                <summary style={{ padding:"15px 18px", background:"#0d0d0d", border:`1px solid ${SEV_COLORS[ev.severity]||"#333"}22`, borderLeft:`4px solid ${SEV_COLORS[ev.severity]||"#555"}`, display:"flex", alignItems:"center", gap:14 }}>
-                  <span style={{ fontSize:16 }}>{CAT_ICONS[ev.category]||"📌"}</span>
-                  <span style={{ flex:1, fontSize:13, color:"#fff" }}>{ev.title}</span>
-                  <span style={{ fontSize:10, color:"#777", marginRight:10 }}>{ev.timestamp}</span>
-                  <span style={{ padding:"3px 10px", fontSize:10, color:SEV_COLORS[ev.severity], border:`1px solid ${SEV_COLORS[ev.severity]||"#555"}44`, fontWeight:"bold" }}>{ev.severity}</span>
-                </summary>
-                <div style={{ padding:"14px 18px", background:"#090909", border:"1px solid #141414", borderTop:"none", fontSize:13, color:"#b0b8b0", lineHeight:1.85 }}>{ev.description}</div>
-              </details>
-            ))}
+            <SectionHead>⚡ EVENT LOG — {data.events?.length||0} CONFIRMED EVENTS FROM LIVE SCAN</SectionHead>
+            {(!data.events || data.events.length === 0) && (
+              <div style={{ padding:"40px 24px", textAlign:"center", color:"#444", fontSize:12, letterSpacing:3, border:"1px solid #1a1a1a" }}>
+                NO EVENTS LOADED — HIT REFRESH NOW TO PULL LATEST NEWS
+              </div>
+            )}
+            {(data.events||[]).map((ev,i) => {
+              const sevColor = SEV_COLORS[ev.severity] || "#555";
+              return (
+                <details key={i} style={{ marginBottom:8 }}>
+                  <summary style={{ padding:"15px 18px", background:"#0d0d0d", border:`1px solid ${sevColor}22`, borderLeft:`4px solid ${sevColor}`, display:"flex", alignItems:"center", gap:14, listStyle:"none" }}>
+                    <span style={{ fontSize:16, flexShrink:0 }}>{CAT_ICONS[ev.category]||"📌"}</span>
+                    <span style={{ flex:1, fontSize:13, color:"#fff", lineHeight:1.4 }}>{ev.title}</span>
+                    <span style={{ fontSize:10, color:"#666", marginRight:8, flexShrink:0 }}>{ev.timestamp}</span>
+                    <span style={{ padding:"3px 10px", fontSize:9, color:sevColor, border:`1px solid ${sevColor}44`, fontWeight:"bold", flexShrink:0, letterSpacing:1 }}>{ev.severity}</span>
+                    <span style={{ color:"#444", fontSize:10, flexShrink:0 }}>▶</span>
+                  </summary>
+                  <div style={{ padding:"14px 18px", background:"#090909", border:`1px solid ${sevColor}11`, borderTop:"none", fontSize:13, color:"#b0b8b0", lineHeight:1.85 }}>{ev.description}</div>
+                </details>
+              );
+            })}
+          </div>
+        )}
+
+        {/* HOMELAND */}
+        {tab==="homeland" && (
+          <div className="fu">
+            <HomelandTab homeland={data?.homeland} threatLevel={data?.threat_level} />
           </div>
         )}
 
@@ -611,20 +1160,39 @@ export default function KonfliktApp() {
         {/* THREATS */}
         {data && tab==="threats" && (
           <div className="fu" style={{ paddingTop:28 }}>
-            <SectionHead>⚠ ACTIVE THREATS — {data.threats?.length||0} IDENTIFIED</SectionHead>
-            {[...(data.threats||[])].sort((a,b)=>({HIGH:0,MEDIUM:1,LOW:2}[a.likelihood]||0)-({HIGH:0,MEDIUM:1,LOW:2}[b.likelihood]||0))
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+              <SectionHead>⚠ ACTIVE & CONFIRMED THREATS — {data.threats?.length||0} IDENTIFIED</SectionHead>
+            </div>
+            <div style={{ padding:"10px 16px", background:"#0f0a00", border:"1px solid #ff880022", marginBottom:20, fontSize:11, color:"#888", lineHeight:1.8 }}>
+              Confirmed = intelligence confirms threat is real and active. Imminent = assessed as likely to occur within 24-48h.
+            </div>
+            {(!data.threats || data.threats.length === 0) && (
+              <div style={{ padding:"40px 24px", textAlign:"center", color:"#444", fontSize:12, letterSpacing:3, border:"1px solid #1a1a1a" }}>
+                NO THREAT DATA — HIT REFRESH NOW TO PULL LATEST INTEL
+              </div>
+            )}
+            {[...(data.threats||[])].sort((a,b)=>({HIGH:0,MEDIUM:1,LOW:2}[a.likelihood]||1)-({HIGH:0,MEDIUM:1,LOW:2}[b.likelihood]||1))
               .map((t,i) => {
-                const c={HIGH:"#ff3300",MEDIUM:"#ff8800",LOW:"#888"}[t.likelihood]||"#888";
+                const lc = {HIGH:"#ff3300",MEDIUM:"#ff8800",LOW:"#888"}[t.likelihood]||"#888";
+                const statusColor = t.status==="ACTIVE"?"#ff3300":t.status==="ONGOING"?"#ff6600":"#ffaa00";
+                const confirmed = t.confirmed !== false;
                 return (
-                  <div key={i} className="card" style={{ borderLeft:`4px solid ${c}` }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:12 }}>
-                      <span style={{ fontSize:14, color:"#fff" }}>{t.target}</span>
-                      <div style={{ display:"flex", gap:10 }}>
-                        <span style={{ fontSize:10, color:"#888", border:"1px solid #222", padding:"3px 10px" }}>{t.type}</span>
-                        <span style={{ fontSize:10, color:c, border:`1px solid ${c}44`, padding:"3px 10px", fontWeight:"bold" }}>{t.likelihood}</span>
+                  <div key={i} className="card" style={{ borderLeft:`4px solid ${lc}`, marginBottom:10 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                      <div style={{ flex:1, paddingRight:12 }}>
+                        <div style={{ fontSize:15, color:"#fff", fontWeight:"bold", marginBottom:4 }}>🎯 {t.target}</div>
+                        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                          {t.type && <span style={{ fontSize:9, color:"#888", padding:"2px 8px", border:"1px solid #222", letterSpacing:1 }}>{t.type?.toUpperCase()}</span>}
+                          {t.source && <span style={{ fontSize:9, color:"#cc6600", padding:"2px 8px", border:"1px solid #33220022", background:"#1a0e00" }}>FROM: {t.source}</span>}
+                          <span style={{ fontSize:9, color: confirmed?"#ff4400":"#ffaa00", padding:"2px 8px", border:`1px solid ${confirmed?"#ff440033":"#ffaa0033"}`, fontWeight:"bold" }}>
+                            {confirmed ? "✓ CONFIRMED" : "⚠ ASSESSED"}
+                          </span>
+                          {t.status && <span style={{ fontSize:9, color:statusColor, padding:"2px 8px", border:`1px solid ${statusColor}33`, fontWeight:"bold", animation:t.status==="ACTIVE"?"pulse 1s infinite":"none" }}>{t.status}</span>}
+                        </div>
                       </div>
+                      <span style={{ fontSize:11, color:lc, fontWeight:"bold", padding:"4px 12px", border:`1px solid ${lc}44`, background:`${lc}11`, flexShrink:0 }}>{t.likelihood}</span>
                     </div>
-                    <div style={{ fontSize:13, color:"#b0b8b0", lineHeight:1.75 }}>{t.description}</div>
+                    <div style={{ fontSize:13, color:"#c0c8c0", lineHeight:1.8 }}>{t.description}</div>
                   </div>
                 );
               })}
@@ -634,20 +1202,39 @@ export default function KonfliktApp() {
         {/* PREDICTIONS */}
         {data && tab==="predict" && (
           <div className="fu" style={{ paddingTop:28 }}>
-            <SectionHead>◈ SCENARIO PREDICTIONS — LIVE PROBABILITY MODEL</SectionHead>
-            <div style={{ padding:"12px 16px", background:"#0c0c14", border:"1px solid #1a1a2a", marginBottom:20, fontSize:11, color:"#888", lineHeight:1.9 }}>
-              ⚠ Probabilities are model estimates from current intelligence. Auto-updates every 5 minutes.
+            <SectionHead>◈ THREAT PREDICTIONS — RANKED BY DAMAGE POTENTIAL</SectionHead>
+            <div style={{ padding:"10px 16px", background:"#0c0a14", border:"1px solid #3333aa33", marginBottom:20, fontSize:11, color:"#888", lineHeight:1.9 }}>
+              Scenarios ranked by likelihood AND damage potential. 🇺🇸 = directly targets US or US interests. Auto-updates every 5 min.
             </div>
-            {[...(data.predictions||[])].sort((a,b)=>b.probability-a.probability).map((p,i) => (
-              <div key={i} className="card" style={{ borderLeft:"3px solid #5555cc" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                  <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:16, color:"#fff", flex:1, paddingRight:16 }}>{p.scenario}</div>
-                  <span style={{ fontSize:10, color:"#888", letterSpacing:2 }}>{p.timeframe}</span>
-                </div>
-                <ProbBar value={p.probability} trend={p.trend} />
-                <div style={{ fontSize:12, color:"#9999aa", lineHeight:1.8, marginTop:12 }}>{p.reasoning}</div>
+            {(!data.predictions || data.predictions.length === 0) && (
+              <div style={{ padding:"40px 24px", textAlign:"center", color:"#444", fontSize:12, letterSpacing:3, border:"1px solid #1a1a1a" }}>
+                NO PREDICTION DATA — HIT REFRESH NOW
               </div>
-            ))}
+            )}
+            {[...(data.predictions||[])].sort((a,b)=>{
+              const dmgOrder = {CATASTROPHIC:0,SEVERE:1,HIGH:2,MODERATE:3};
+              const dmgA = dmgOrder[a.damage_level]??2;
+              const dmgB = dmgOrder[b.damage_level]??2;
+              return (dmgA - dmgB) || (b.probability - a.probability);
+            }).map((p,i) => {
+              const dmgColor = {CATASTROPHIC:"#ff0000",SEVERE:"#ff3300",HIGH:"#ff8800",MODERATE:"#ffcc00"}[p.damage_level]||"#8888cc";
+              const probColor = p.probability > 70 ? "#ff3300" : p.probability > 40 ? "#ff8800" : "#00cc55";
+              return (
+                <div key={i} className="card" style={{ borderLeft:`3px solid ${dmgColor}`, marginBottom:12 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+                    <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:16, color:"#fff", flex:1, paddingRight:16, lineHeight:1.3 }}>
+                      {p.targets_us && <span style={{ marginRight:8 }}>🇺🇸</span>}{p.scenario}
+                    </div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:4, alignItems:"flex-end", flexShrink:0 }}>
+                      <span style={{ fontSize:9, color:dmgColor, padding:"2px 8px", border:`1px solid ${dmgColor}44`, fontWeight:"bold", letterSpacing:1 }}>{p.damage_level||"UNKNOWN"}</span>
+                      <span style={{ fontSize:9, color:"#777", letterSpacing:1 }}>{p.timeframe}</span>
+                    </div>
+                  </div>
+                  <ProbBar value={p.probability} trend={p.trend} />
+                  <div style={{ fontSize:12, color:"#9999aa", lineHeight:1.8, marginTop:10 }}>{p.reasoning}</div>
+                </div>
+              );
+            })}
           </div>
         )}
 
