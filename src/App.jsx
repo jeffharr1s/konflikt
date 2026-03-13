@@ -190,7 +190,7 @@ async function callAPI(system, useSearch) {
   };
   if (useSearch) body.tools = [{ type:"web_search_20250305", name:"web_search" }];
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch("/api/intel", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
     body: JSON.stringify(body),
