@@ -377,28 +377,111 @@ function AlliancesTab({ alliances }) {
       </div>
 
       {/* Cards */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-        {filtered.map((a,i) => {
-          const cfg = SIDE_CONFIG[a.side]||SIDE_CONFIG.UNKNOWN;
-          const sc = STATUS_COLORS[a.status]||"#888";
-          return (
-            <div key={i} style={{ padding:"16px 20px", background:"#0d0d0d", border:`1px solid ${cfg.color}22`, borderLeft:`4px solid ${cfg.color}` }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                  <span style={{ fontSize:18 }}>{cfg.icon}</span>
-                  <div>
-                    <div style={{ fontSize:14, color:"#fff", fontWeight:"bold" }}>{a.country}</div>
-                    <div style={{ fontSize:9, color:cfg.color, letterSpacing:2, marginTop:2 }}>{cfg.label}</div>
+      {filter === "all" ? (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14 }}>
+          {/* US COALITION — LEFT */}
+          <div>
+            <div style={{ fontSize:10, color:"#3399ff", letterSpacing:3, fontWeight:"bold", marginBottom:10, paddingBottom:6, borderBottom:"1px solid #3399ff33" }}>🇺🇸 US COALITION</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {grouped.US_COALITION.map((a,i) => {
+                const cfg = SIDE_CONFIG.US_COALITION;
+                const sc = STATUS_COLORS[a.status]||"#888";
+                return (
+                  <div key={i} style={{ padding:"14px 16px", background:"#0d0d0d", border:`1px solid ${cfg.color}22`, borderLeft:`4px solid ${cfg.color}` }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <span style={{ fontSize:16 }}>{cfg.icon}</span>
+                        <div>
+                          <div style={{ fontSize:13, color:"#fff", fontWeight:"bold" }}>{a.country}</div>
+                          <div style={{ fontSize:9, color:cfg.color, letterSpacing:2, marginTop:2 }}>{cfg.label}</div>
+                        </div>
+                      </div>
+                      <span style={{ fontSize:9, color:sc, letterSpacing:1, fontWeight:"bold", padding:"2px 8px", border:`1px solid ${sc}44`, background:`${sc}11` }}>{a.status}</span>
+                    </div>
+                    {a.role && <div style={{ fontSize:10, color:"#666", marginBottom:4 }}>ROLE: <span style={{ color:"#999" }}>{a.role}</span></div>}
+                    {a.note && <div style={{ fontSize:11, color:"#b0b8b0", lineHeight:1.7 }}>{a.note}</div>}
                   </div>
-                </div>
-                <span style={{ fontSize:9, color:sc, letterSpacing:1, fontWeight:"bold", padding:"2px 8px", border:`1px solid ${sc}44`, background:`${sc}11` }}>{a.status}</span>
-              </div>
-              {a.role && <div style={{ fontSize:10, color:"#666", marginBottom:6 }}>ROLE: <span style={{ color:"#999" }}>{a.role}</span></div>}
-              {a.note && <div style={{ fontSize:12, color:"#b0b8b0", lineHeight:1.7 }}>{a.note}</div>}
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+          </div>
+          {/* NEUTRAL — MIDDLE */}
+          <div>
+            <div style={{ fontSize:10, color:"#888", letterSpacing:3, fontWeight:"bold", marginBottom:10, paddingBottom:6, borderBottom:"1px solid #33333388" }}>⚪ NEUTRAL / UNKNOWN</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {[...grouped.NEUTRAL, ...grouped.UNKNOWN].map((a,i) => {
+                const cfg = SIDE_CONFIG[a.side]||SIDE_CONFIG.UNKNOWN;
+                const sc = STATUS_COLORS[a.status]||"#888";
+                return (
+                  <div key={i} style={{ padding:"14px 16px", background:"#0d0d0d", border:`1px solid ${cfg.color}22`, borderLeft:`4px solid ${cfg.color}` }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <span style={{ fontSize:16 }}>{cfg.icon}</span>
+                        <div>
+                          <div style={{ fontSize:13, color:"#fff", fontWeight:"bold" }}>{a.country}</div>
+                          <div style={{ fontSize:9, color:cfg.color, letterSpacing:2, marginTop:2 }}>{cfg.label}</div>
+                        </div>
+                      </div>
+                      <span style={{ fontSize:9, color:sc, letterSpacing:1, fontWeight:"bold", padding:"2px 8px", border:`1px solid ${sc}44`, background:`${sc}11` }}>{a.status}</span>
+                    </div>
+                    {a.role && <div style={{ fontSize:10, color:"#666", marginBottom:4 }}>ROLE: <span style={{ color:"#999" }}>{a.role}</span></div>}
+                    {a.note && <div style={{ fontSize:11, color:"#b0b8b0", lineHeight:1.7 }}>{a.note}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {/* IRAN AXIS — RIGHT */}
+          <div>
+            <div style={{ fontSize:10, color:"#ff5533", letterSpacing:3, fontWeight:"bold", marginBottom:10, paddingBottom:6, borderBottom:"1px solid #ff330033" }}>🇮🇷 IRAN AXIS</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {grouped.IRAN_AXIS.map((a,i) => {
+                const cfg = SIDE_CONFIG.IRAN_AXIS;
+                const sc = STATUS_COLORS[a.status]||"#888";
+                return (
+                  <div key={i} style={{ padding:"14px 16px", background:"#0d0d0d", border:`1px solid ${cfg.color}22`, borderLeft:`4px solid ${cfg.color}` }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <span style={{ fontSize:16 }}>{cfg.icon}</span>
+                        <div>
+                          <div style={{ fontSize:13, color:"#fff", fontWeight:"bold" }}>{a.country}</div>
+                          <div style={{ fontSize:9, color:cfg.color, letterSpacing:2, marginTop:2 }}>{cfg.label}</div>
+                        </div>
+                      </div>
+                      <span style={{ fontSize:9, color:sc, letterSpacing:1, fontWeight:"bold", padding:"2px 8px", border:`1px solid ${sc}44`, background:`${sc}11` }}>{a.status}</span>
+                    </div>
+                    {a.role && <div style={{ fontSize:10, color:"#666", marginBottom:4 }}>ROLE: <span style={{ color:"#999" }}>{a.role}</span></div>}
+                    {a.note && <div style={{ fontSize:11, color:"#b0b8b0", lineHeight:1.7 }}>{a.note}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+          {filtered.map((a,i) => {
+            const cfg = SIDE_CONFIG[a.side]||SIDE_CONFIG.UNKNOWN;
+            const sc = STATUS_COLORS[a.status]||"#888";
+            return (
+              <div key={i} style={{ padding:"16px 20px", background:"#0d0d0d", border:`1px solid ${cfg.color}22`, borderLeft:`4px solid ${cfg.color}` }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                    <span style={{ fontSize:18 }}>{cfg.icon}</span>
+                    <div>
+                      <div style={{ fontSize:14, color:"#fff", fontWeight:"bold" }}>{a.country}</div>
+                      <div style={{ fontSize:9, color:cfg.color, letterSpacing:2, marginTop:2 }}>{cfg.label}</div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize:9, color:sc, letterSpacing:1, fontWeight:"bold", padding:"2px 8px", border:`1px solid ${sc}44`, background:`${sc}11` }}>{a.status}</span>
+                </div>
+                {a.role && <div style={{ fontSize:10, color:"#666", marginBottom:6 }}>ROLE: <span style={{ color:"#999" }}>{a.role}</span></div>}
+                {a.note && <div style={{ fontSize:12, color:"#b0b8b0", lineHeight:1.7 }}>{a.note}</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {alliances.some(a => a.status==="SHIFTING") && (
         <div style={{ marginTop:20, padding:"12px 18px", background:"#1a0a22", border:"1px solid #cc44ff44", display:"flex", gap:12 }}>
